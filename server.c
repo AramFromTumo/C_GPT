@@ -10,18 +10,17 @@
 #define PORT		8080
 #define MAX_CLIENTS 	10
 
-int port = 8080;
-
+/*
 struct Student
 {
 	char name[50];
 	int age;
 };
-
+*/
 int main()
 { 
+	int new_client;
 	int server_fd;
-	int new_socket;
 	int client_sockets[MAX_CLIENTS];
 	struct sockaddr_in address;
 	socklen_t addrlen = sizeof(address);
@@ -52,6 +51,70 @@ int main()
 		
 		FD_SET(server_fd, &readfds);
 		int max_fd = server_fd;
+
+		for(int i = 0; i < MAX_CLIENTS; i++)
+		{
+			int fd = client_sockets[i];
+			if(fd > 0)
+			{
+				//printf("FD_SET\n");
+				FD_SET(fd, &readfds);
+			}
+			else
+			{
+				break;
+			}
+			if(fd > max_fd)
+			{
+				max_fd = fd;
+			}
+		}
+		select(max_fd+1, &readfds, NULL, NULL, NULL);
+		//printf("HERE\n");
+		if(FD_ISSET(server_fd, &readfds))
+		{
+			//printf("HERE2\n");
+			new_client = accept(server_fd, (struct sockaddr *)&address, &addrlen);
+			printf("New connection: socket id: %d, IP: %s", new_client, inet_ntoa(address.sin_addr));
+			
+			for(int i = 0; i < MAX_CLIENTS; i++)
+			{
+				if(client_sockets[i] == 0)
+				{
+					client_sockets[i] = new_client;
+					break;
+				}
+			}
+		}
+
+		for(int i = 0; i <MAX_CLIENTS; i++)
+		{
+			int fd = client_sockets[i];
+			if(FD_ISSET(fd, &readfds))
+			{
+				int val = read(fd, buffer, 1024);
+				
+				if(val == 0)
+				{
+					getpeername(fd, (struct sockaddr *)&address, &addrlen);
+					printf("Client disconnected: IP: %s", inet_ntoa(address.sin_addr));
+					close(fd);
+					client_sockets[i] = 0;
+				}
+				else
+				{
+					buffer[val] = '\0';
+					for(int j = 0; j < MAX_CLIENTS; j++)
+					{
+						if(client_sockets[j] != 0 && client_sockets[j] != fd)
+						{
+							send(client_sockets[j], buffer, strlen(buffer), 0);
+						}
+					}
+				}
+			}
+		}			
 	}
+
 	return 0;
 }
