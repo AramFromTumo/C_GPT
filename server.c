@@ -10,13 +10,7 @@
 #define PORT		8080
 #define MAX_CLIENTS 	10
 
-/*
-struct Student
-{
-	char name[50];
-	int age;
-};
-*/
+
 int main()
 { 
 	int new_client;
